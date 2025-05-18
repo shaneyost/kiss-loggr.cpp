@@ -6,18 +6,25 @@
 class Logger
 {
 public:
+    /*
+     *  INFO:
+     *
+     *  Varadic template design for logger. All loggers use this
+     * */
     template <typename... Args>
-    static void log(const char* lvl, const char* fle, const char* fnc, int lne,
+    static void log(std::string_view lvl, std::string_view fle, std::string_view fnc, int lne,
                      const std::string& fmt, Args&&... args)
     {
         Level level = str_to_lvl(lvl);
 
-        if (level > configured_lvl())
+        if (level > get_log_lvl())
         {
             return;
         }
 
+        // account for proper spacing of a level, prettier prints
         std::string spacing = (level == Level::DEBUG) ? "" : " ";
+
         std::cout << "[" << lvl << "] " << spacing
                   << "[" << base(fle) << ":" << fnc << " (" << lne << ")] ";
 
@@ -32,42 +39,62 @@ public:
         }
     }
 private:
+    /*
+     *  INFO:
+     *
+     *  Level   - An enumeration of numerical values representing a logging level
+     *  ENV_VAR - Compile-time constant pointer to env variable for configuring logging level
+     * */
     enum class Level { WARN = 0, INFO = 1, DEBUG = 2 };
     inline static constexpr const char* ENV_VAR = "LOG_LVL";
 
+    /*
+     *  INFO:
+     *
+     *  Retrieves the environment variable, returns level via mini lambda
+     * */
     static Level get_log_lvl()
     {
-        const char* env = std::getenv(ENV_VAR);
-        if (!env) return Level::WARN;
+        // mini lambda, caches (evaluates once design)
+        static Level cached_level = [] {
+            const char * env = std::getenv(ENV_VAR);
+            if (!env) return Level::WARN;
 
-        std::string_view level(env);
-        if (level == "DEBUG") return Level::DEBUG;
-        if (level == "INFO") return Level::INFO;
+            std::string_view level{env};
+            if (!level.compare("DEBUG")) return Level::DEBUG;
+            if (!level.compare("INFO")) return Level::INFO;
+
+            return Level::WARN;
+        }();
+        return cached_level;
+    }
+
+    /*
+     *  INFO:
+     *
+     *  Converts a level string into a Level then returns it
+     *
+     * */
+    static Level str_to_lvl(std::string_view lvl)
+    {
+        if (!lvl.compare("DEBUG")) return Level::DEBUG;
+        if (!lvl.compare("INFO")) return Level::INFO;
         return Level::WARN;
     }
 
-    static Level configured_lvl()
+    /*
+     *  INFO:
+     *
+     *  Prevent the full path getting printed, only care about file name
+     *
+     * */
+    static std::string_view base(std::string_view path)
     {
-        static Level level = get_log_lvl();
-        return level;
-    }
-
-    static Level str_to_lvl(const char * lvl)
-    {
-        if (std::string_view(lvl) == "DEBUG") return Level::DEBUG;
-        if (std::string_view(lvl) == "INFO") return Level::INFO;
-        return Level::WARN;
-    }
-
-    static std::string_view base(const char* path)
-    {
-        std::string_view p(path);
-        size_t pos = p.find_last_of("/\\");
-        return (pos == std::string_view::npos) ? p : p.substr(pos + 1);
+        size_t pos = path.find_last_of("/\\");
+        return (pos == std::string_view::npos) ? path : path.substr(pos + 1);
     }
 };
 
 #define LOG_WARN(...) Logger::log("WARN", __FILE__, __func__, __LINE__, __VA_ARGS__)
 #define LOG_INFO(...) Logger::log("INFO", __FILE__, __func__, __LINE__, __VA_ARGS__)
 #define LOG_DEBUG(...) Logger::log("DEBUG", __FILE__, __func__, __LINE__, __VA_ARGS__)
-

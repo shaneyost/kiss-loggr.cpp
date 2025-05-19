@@ -2,6 +2,7 @@
 #include <string>
 #include <iostream>
 #include <string_view>
+#include <iomanip>
 
 class Logger
 {
@@ -12,8 +13,8 @@ public:
      *  Varadic template design for logger. All loggers use this
      * */
     template <typename... Args>
-    static void log(std::string_view lvl, std::string_view fle, std::string_view fnc, int lne,
-                     const std::string& fmt, Args&&... args)
+    static void log(std::string_view lvl, std::string_view fle, std::string_view fnc, int lne, 
+                    const std::string& fmt, Args&&... args)
     {
         Level level = str_to_lvl(lvl);
 
@@ -38,6 +39,43 @@ public:
             std::printf("\n");
         }
     }
+
+    static void buf(std::string_view lvl, std::string_view fle, std::string_view fnc, int lne, 
+                    const uint8_t* data, size_t total_len, size_t len_to_print)
+    {
+        Level level = str_to_lvl(lvl);
+
+        if (level > get_log_lvl())
+        {
+            return;
+        }
+
+        // account for proper spacing of a level, prettier prints
+        std::string spacing = (level == Level::DEBUG) ? "" : " ";
+
+        std::cout << "[" << lvl << "] " << spacing
+                  << "[" << base(fle) << ":" << fnc << " (" << lne << ")] ";
+
+        size_t safe_len_to_print = (total_len < len_to_print) ? total_len : len_to_print;
+        for (size_t i = 0; i < safe_len_to_print; i++)
+        {
+             std::cout << std::hex << std::setw(2) << std::setfill('0')
+                       << static_cast<int>(data[i]) << " ";
+        }
+
+        if (total_len >= len_to_print)
+        {
+            std::cout << "... (" << total_len << " bytes total)";
+        }
+        std::cout << std::dec << std::endl;
+    }
+
+    static void buf(std::string_view lvl, std::string_view fle, std::string_view fnc, int lne, 
+                    const std::vector<uint8_t>& data, size_t len_to_print)
+    {
+        buf(lvl, fle, fnc, lne, data.data(), data.size(), len_to_print);
+    }
+
 private:
     /*
      *  INFO:
@@ -101,3 +139,11 @@ private:
 #define LOG_WARN(...) Logger::log("WARN", __FILE__, __func__, __LINE__, __VA_ARGS__)
 #define LOG_INFO(...) Logger::log("INFO", __FILE__, __func__, __LINE__, __VA_ARGS__)
 #define LOG_DEBUG(...) Logger::log("DEBUG", __FILE__, __func__, __LINE__, __VA_ARGS__)
+
+#define LOG_BUFFER_WARN(d, tl, pl) Logger::buf("WARN", __FILE__, __func__, __LINE__, d, tl, pl)
+#define LOG_BUFFER_INFO(d, tl, pl) Logger::buf("INFO", __FILE__, __func__, __LINE__, d, tl, pl)
+#define LOG_BUFFER_DEBUG(d, tl, pl) Logger::buf("DEBUG", __FILE__, __func__, __LINE__, d, tl, pl)
+
+#define LOG_VECTOR_WARN(d, pl) Logger::buf("WARN", __FILE__, __func__, __LINE__, d, pl)
+#define LOG_VECTOR_INFO(d, pl) Logger::buf("INFO", __FILE__, __func__, __LINE__, d, pl)
+#define LOG_VECTOR_DEBUG(d, pl) Logger::buf("DEBUG", __FILE__, __func__, __LINE__, d, pl)

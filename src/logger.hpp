@@ -87,6 +87,9 @@ private:
      *
      *  Prevent the full path getting printed, only care about file name
      *
+     *  WARN:
+     *
+     *  We're safe here as long as we immediately use the return value
      * */
     static std::string_view base(std::string_view path)
     {

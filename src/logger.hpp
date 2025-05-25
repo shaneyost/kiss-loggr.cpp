@@ -4,6 +4,12 @@
 #include <string_view>
 #include <iomanip>
 
+
+#define LOG(lvl, ...)               Logger::log(lvl, __FILE__, __func__, __LINE__, __VA_ARGS__)
+#define LOG_BUFFER(lvl, d, tl, pl)  Logger::buf(lvl, __FILE__, __func__, __LINE__, d, tl, pl)
+#define LOG_VECTOR(lvl, d, pl)      Logger::buf(lvl, __FILE__, __func__, __LINE__, d, pl)
+
+
 class Logger
 {
 public:
@@ -22,8 +28,7 @@ public:
         }
 
         // account for proper spacing of a level, prettier prints
-        std::string spacing = (lvl == Level::DEBUG) ? "" : " ";
-        std::cout << "[" << lvl_to_str(lvl) << "] " << spacing
+        std::cout << "[" << lvl_to_str(lvl) << "] " << ((lvl == Level::DEBUG) ? "" : " ")
                   << "[" << base(fle) << ":" << fnc << " (" << lne << ")] ";
 
         if constexpr (sizeof...(args) == 0)
@@ -50,8 +55,7 @@ public:
         }
 
         // account for proper spacing of a level, prettier prints
-        std::string spacing = (lvl == Level::DEBUG) ? "" : " ";
-        std::cout << "[" << lvl_to_str(lvl) << "] " << spacing
+        std::cout << "[" << lvl_to_str(lvl) << "] " << ((lvl == Level::DEBUG) ? "" : " ")
                   << "[" << base(fle) << ":" << fnc << " (" << lne << ")] ";
 
         size_t safe_len_to_print = (total_len < len_to_print) ? total_len : len_to_print;
@@ -124,14 +128,3 @@ private:
         return (pos == std::string_view::npos) ? path : path.substr(pos + 1);
     }
 };
-
-/*
- *  Usage:
- *  LOG(Logger::Level::DEBUG, "Telemetry reading: %d", value);
- *  LOG_BUFFER(Logger::Level::DEBUG, buffer, total_len, 32);
- *  LOG_VECTOR(Logger::Level::DEBUG, vec, 64);
- * */
-#define LOG(lvl, ...)               Logger::log(lvl, __FILE__, __func__, __LINE__, __VA_ARGS__)
-#define LOG_BUFFER(lvl, d, tl, pl)  Logger::buf(lvl, __FILE__, __func__, __LINE__, d, tl, pl)
-#define LOG_VECTOR(lvl, d, pl)      Logger::buf(lvl, __FILE__, __func__, __LINE__, d, pl)
-
